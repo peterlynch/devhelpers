@@ -9,7 +9,19 @@ set -e
 # If it is '+suffix', use 'suffix' as branch identifier (e.g. /tmp/mvnrepo/suffix).
 # If the suffix starts with '/', use that as a full path to the repo (e.g. '+/tmp/repo' will search for nexus bundles in /tmp/repo)
 
-. `dirname $0`/devhelper-common
+# dir of this script
+SOURCE="${BASH_SOURCE[0]}"
+DIR="$( dirname "$SOURCE" )"
+while [ -h "$SOURCE" ]
+do
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+  DIR="$( cd -P "$( dirname "$SOURCE"  )" && pwd )"
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+# load common
+. $DIR/devhelper-common
 
 ga[0]=org.sonatype.nexus:nexus-oss-webapp
 ga[1]=com.sonatype.nexus:nexus

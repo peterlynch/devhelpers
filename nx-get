@@ -2,7 +2,19 @@
 
 set -e
 
-. `dirname $0`/devhelper-common
+# dir of this script
+SOURCE="${BASH_SOURCE[0]}"
+DIR="$( dirname "$SOURCE" )"
+while [ -h "$SOURCE" ]
+do
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+  DIR="$( cd -P "$( dirname "$SOURCE"  )" && pwd )"
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+# load common
+. $DIR/devhelper-common
 
 g=com.sonatype.nexus
 a=nexus-professional
