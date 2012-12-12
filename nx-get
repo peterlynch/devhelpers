@@ -2,19 +2,7 @@
 
 set -e
 
-# dir of this script
-SOURCE="${BASH_SOURCE[0]}"
-DIR="$( dirname "$SOURCE" )"
-while [ -h "$SOURCE" ]
-do
-  SOURCE="$(readlink "$SOURCE")"
-  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
-  DIR="$( cd -P "$( dirname "$SOURCE"  )" && pwd )"
-done
-DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-
-# load common
-. $DIR/devhelper-common
+. $BASEDIR/devhelper-common
 
 g=com.sonatype.nexus
 a=nexus-professional
@@ -43,8 +31,6 @@ function parseFileName(){
 }
 
 
-# $tmp is handled by devhelper-common
-
 if [ "$USE_GAV_DIR" = "true" ]
 then
   dir="$g.$a-$v-remote"
@@ -67,6 +53,7 @@ then
   opts="-d $dir"
 fi
 
+tmp=`tmpfile`
 
 echo "Downloading bundle..."
 if curl -# "$bundle_url" -f --netrc-optional -L -o "$tmp" 
@@ -77,13 +64,13 @@ then
     if [ "$TWEAK_ON_GET" == "true" ]
     then
 	echo "Tweaking bundle..."
-	nx-tweak $dir/$a*
+	nx tweak $dir/$a*
     fi
 
     if [ "$START_ON_GET" == "true" ]
     then
 	echo "Starting bundle..."
-	exec nx-run $dir/$a*
+	exec nx run $dir/$a*
     fi
 
     exit

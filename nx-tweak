@@ -1,9 +1,28 @@
 #!/bin/bash
 
+set -e
+
+. $BASEDIR/devhelper-common
+
+webdev() {
+if [ -z "$WEBAPP_DEV" ] || [ -z "$WEBAPP_DEV_JS_PATH" ] || [ ! -d "$WEBAPP_DEV_JS_PATH" ]
+then
+    echo -e "To symlink javascript files to the dev directory, set WEBAPP_DEV_JS_PATH and use\n  export WEBAPP_DEV=1"
+    return
+fi
+
+
+## restlet cannot handle file symlinks, so we have to nuke sonatype-all.js (don't want to copy that into dev dir...)
+cd "$1/nexus"
+echo "Creating symlink from '$WEBAPP_DEV_JS_PATH' to `realpath js`..."
+rm -rf js
+ln -s "$WEBAPP_DEV_JS_PATH" .
+}
+
 patchWebXml() {
 cd "$1"
 
-cat <<EOF | patch -p0 
+cat <<EOF | ( patch -p0 || echo "patch not applied" )
 +++ nexus/WEB-INF/web.xml.orig	2011-06-17 09:50:19.077758022 +0200
 +++ nexus/WEB-INF/web.xml	2011-06-17 09:50:33.077758022 +0200
 @@ -146,6 +146,7 @@
@@ -27,19 +46,18 @@ sed -i -e "s@org.mortbay.jetty.servlet.DefaultServlet@org.eclipse.jetty.servlet.
 beautifyJs() {
     installDir="$1"
     jsPath=$installDir/nexus/js/sonatype-all.js
-    [ -x "`which jsbeautifier.py`" ] && jsbeautifier.py $jsPath >$jsPath.formatted
-    mv $jsPath.formatted $jsPath 
+    [ -x "`which jsbeautifier.py`" ] && ( jsbeautifier.py $jsPath >$jsPath.formatted && mv $jsPath.formatted $jsPath ) || ( echo "jsbeautifier failed" && rm $jsPath.formatted )
 }
 
 enableJavaDebugging() {
-sed -i -e "s/#wrapper.java.additional/wrapper.java.additional/" -e "s/suspend=y,address=8000/suspend=n,address=8001/" "$1/bin/jsw/conf/wrapper.conf"
+    sed -i -e "s/#wrapper.java.additional.\([0-9]*=-\)/wrapper.java.additional.\1/" -e "s/suspend=y,address=8000/suspend=n,address=8001/" "$1/bin/jsw/conf/wrapper.conf"
 }
 
 logLevel() {
     level="$1"
     installDir="$2"
 
-    loggingJar="`find $2 -name "nexus-logging-extras-*jar" -print0 | xargs -0 realpath`"
+    loggingJar="`find $2 -path "*/WEB-INF/*" -name "nexus-logging-extras-*jar" -print0 | xargs -0 realpath`"
 
     mkdir -p "$installDir/../sonatype-work/nexus/conf"
     cd "$installDir/../sonatype-work/nexus/conf"
@@ -51,10 +69,11 @@ logLevel() {
 }
 
 tweak() {
-    ( beautifyJs "$@" )
+#    ( beautifyJs "$@" )
     ( patchWebXml "$@" ) 
     ( enableJavaDebugging "$@" ) 
     ( logLevel DEBUG "$@" ) 
+    ( webdev "$@" )
 }
 
 tweak "$@"

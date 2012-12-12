@@ -1,0 +1,50 @@
+#!/bin/bash
+
+. "$BASEDIR/devhelper-common"
+
+gitUrl=`pushUrl`
+
+url=`ghRepoUrl "$gitUrl"`
+
+if [ $# -eq 2 ]
+then
+    branch="$1"
+    shift
+else
+    branch=`current_branch`
+fi
+
+url="$url/tree/$branch"
+
+repoPath() {
+    path="$1"
+    if [ -z "$path" ]
+    then
+        path="."
+    fi
+
+    path=`realpath "$path"`
+
+    if [ -f "$path" ]
+    then
+	relativePath="`basename $path`"
+	path="`dirname $path`"
+    fi
+
+    (
+    	cd "$path"
+	while [ ! -d ".git" ]
+	do
+	    relativePath="`basename "$path"`/$relativePath"
+	    cd ..
+	    path=`pwd`
+	done
+
+	echo "$relativePath"
+    )
+}
+
+url="$url/`repoPath $1`"
+
+
+$BROWSER "$url" 

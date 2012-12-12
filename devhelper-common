@@ -4,6 +4,8 @@ REMOTE=upstream
 NEXUS=http://localhost:8081/nexus
 BROWSER=firefox
 
+export DH_TMPDIR=""
+
 if [ ! -z "$DH_DEBUG" ]
 then
     echo -e "DEBUG MODE! Turn off with\n unset DH_DEBUG"
@@ -13,10 +15,20 @@ fi
 test -r $HOME/.devhelper && . $HOME/.devhelper
 
 cleanup() {
-    rm -f "$tmp"
+    if ! [ -z "$DH_TMPDIR" ]
+    then
+	rm -rf "$DH_TMPDIR"
+    fi
 }
 
 remote() {
+    repos=`git remote 2>/dev/null|| echo skip ` # if git remote fails, this is not a git repo
+    if [ "$repos" = skip ] 
+    then
+	echo >&2 "This is not a git repo, 'git remote' failed"
+	return 1
+    fi
+
     if echo "$repos" | grep "$REMOTE" -q
     then
 	repo="$REMOTE"
@@ -25,7 +37,7 @@ remote() {
 	repo="origin"
     else
 	echo >&2 "unknown or empty remotes: '$repos'"
-	exit 1
+	return 1
     fi
 
     echo "$repo"
@@ -52,5 +64,68 @@ local_repo() {
     fi
 }
 
+tmpdir() {
+    if [ -z "$DH_TMPDIR" ]
+    then
+	DH_TMPDIR="`mktemp -d -t devhelper.XXXXXXXXXX`"
+    fi
+    echo "$DH_TMPDIR"
+}
+
+tmpfile() {
+    mktemp -p `tmpdir` -t devhelper.XXXXXXXXXX
+}
+
+pushUrl() {
+    remoteName="$1"
+    if [ -z "$remoteName" ]
+    then
+	remoteName=`remote`
+	if [ $? -ne 0 ]
+	then
+	    echo >&2 "No git remote found"
+	    return 1
+	fi
+    fi
+
+    gitUrl=$(git remote show -n $remoteName | grep "Push  URL:" | cut -d ":" -f 2- | tr -d '[[:space:]]' )
+
+    echo $gitUrl
+}
+
+function ghRepoUrl {
+    if ! (echo "$gitUrl" | grep -q 'git@github.com')
+    then
+	echo >&2 "URL does not point to github: '$gitUrl'"
+	exit 1
+    fi
+    echo "$1" | sed -e "s#git@github.com:\(.*\)\?#https://github.com/\1#" -e "s/\.git$//"
+}
+
+pushUrl() {
+    remoteName="$1"
+    if [ -z "$remoteName" ]
+    then
+	remoteName=`remote`
+	if [ $? -ne 0 ]
+	then
+	    echo >&2 "No git remote found"
+	    return 1
+	fi
+    fi
+
+    gitUrl=$(git remote show -n $remoteName | grep "Push  URL:" | cut -d ":" -f 2- | tr -d '[[:space:]]' )
+
+    echo $gitUrl
+}
+
+function ghRepoUrl {
+    if ! (echo "$gitUrl" | grep -q 'git@github.com')
+    then
+	echo >&2 "URL does not point to github: '$gitUrl'"
+	exit 1
+    fi
+    echo "$1" | sed -e "s#git@github.com:\(.*\)\?#https://github.com/\1#" -e "s/\.git$//"
+}
+
 trap cleanup EXIT INT
-tmp=`mktemp -t devhelper.XXXXXXXXXX`

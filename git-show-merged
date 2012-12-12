@@ -1,20 +1,23 @@
-#!/bin/sh
+#!/bin/bash
 
 # dir of this script
 SOURCE="${BASH_SOURCE[0]}"
-DIR="$( dirname "$SOURCE" )"
+BASEDIR="$( dirname "$SOURCE" )"
+
 while [ -h "$SOURCE" ]
 do
-  SOURCE="$(readlink "$SOURCE")"
-  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
-  DIR="$( cd -P "$( dirname "$SOURCE"  )" && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+    BASEDIR="$( cd -P "$( dirname "$SOURCE"  )" && pwd )"
 done
-DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
-# load common
-. $DIR/devhelper-common
+BASEDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+. "$BASEDIR/devhelper-common"
 
 branch_name=`current_branch`
+
+tmp=`tmpfile`
 
 git branch -a --merged $REMOTE/$branch_name | grep -v "* $branch_name" | grep -v "$REMOTE/$branch_name" >"$tmp"
 
